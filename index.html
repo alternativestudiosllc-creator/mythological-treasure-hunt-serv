@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Mythological Treasure Hunt</title>
+<style>
+  :root{
+    --ink:#5a4219; --ink-dark:#3a2a10; --parchment:#f3e5c3; --parchment-2:#e8d5a8;
+    --gold:#b8860b; --card:#fbf3da; --line:#a9834a;
+    --c0:#b03a2e; --c1:#1f618d; --c2:#1e8449; --c3:#7d3c98; --c4:#ca6f1e; --c5:#117a65;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; font-family:Georgia,'Times New Roman',serif; color:var(--ink);
+    background:#2e2110 url('') repeat; background-color:#e9d9b4;
+    background-image:radial-gradient(ellipse at 20% 10%, #f6ecd0 0%, transparent 55%),radial-gradient(ellipse at 85% 90%, #dcc491 0%, transparent 50%),linear-gradient(#ecdcb2,#e2cd97);}
+  .wrap{max-width:560px; margin:0 auto; padding:12px 12px 24px;}
+  h1{font-variant:small-caps; letter-spacing:1px; text-align:center; color:var(--ink-dark); margin:10px 0 2px; font-size:1.55rem;}
+  .sub{text-align:center; font-style:italic; margin:0 0 14px; font-size:.9rem;}
+  .card{background:var(--card); border:2px solid var(--line); border-radius:12px; padding:14px; margin:12px 0; box-shadow:0 3px 10px rgba(58,42,16,.25);}
+  label{font-weight:bold; display:block; margin:8px 0 4px; font-size:.95rem;}
+  input[type=text]{width:100%; padding:12px; font-size:1.05rem; border:2px solid var(--line); border-radius:8px; background:#fffdf4; color:var(--ink-dark); text-align:left;}
+  input.code{text-transform:uppercase; letter-spacing:6px; text-align:center; font-weight:bold;}
+  button{font-family:inherit; cursor:pointer; border:2px solid var(--ink-dark); background:linear-gradient(#caa64f,#a9834a); color:#fff8e6;
+    padding:12px 16px; border-radius:10px; font-size:1rem; font-weight:bold; width:100%; margin:6px 0; box-shadow:0 2px 5px rgba(58,42,16,.35);}
+  button:active{transform:translateY(1px);}
+  button:disabled{opacity:.45; cursor:not-allowed;}
+  button.ghost{background:#fbf3da; color:var(--ink-dark);}
+  button.choice{background:#fffdf4; color:var(--ink-dark); text-align:left; font-weight:normal;}
+  .row{display:flex; gap:8px;} .row>*{flex:1;}
+  .seg{display:flex; gap:8px;} .seg button{flex:1;}
+  .seg button.sel{background:linear-gradient(#8a6a25,#6e5417); outline:3px solid var(--gold);}
+  .bigcode{font-size:2.6rem; letter-spacing:10px; text-align:center; font-weight:bold; color:var(--ink-dark); margin:4px 0;}
+  .plist{list-style:none; padding:0; margin:8px 0;}
+  .plist li{padding:7px 10px; border:1px solid var(--line); border-radius:8px; margin:5px 0; background:#fffdf4; display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;}
+  .away{opacity:.55;} .tag{font-size:.75rem; font-style:italic;}
+  .chargrid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .chargrid button{margin:0; padding:12px 6px; font-size:.95rem;}
+  .chargrid button.mine{background:linear-gradient(#8a6a25,#6e5417); outline:3px solid var(--gold);}
+  .chargrid button.taken{opacity:.4;}
+  /* board */
+  .board{display:grid; grid-template-columns:repeat(8,1fr); gap:4px; margin:10px 0;}
+  .disc{position:relative; aspect-ratio:1/1; border-radius:50%; border:2px solid var(--ink);
+    background:radial-gradient(circle at 35% 30%, #fdf6dd, #ecd9a8 70%, #d9bd7f);
+    display:flex; align-items:center; justify-content:center; font-weight:bold; color:var(--ink-dark); font-size:.8rem;}
+  .disc small{position:absolute; bottom:1px; font-size:.5rem; font-weight:normal; opacity:.7;}
+  .disc.start{background:radial-gradient(circle at 35% 30%, #6e5417, #3a2a10); color:#f3e5c3; font-size:.5rem;}
+  .disc.finish{background:radial-gradient(circle at 35% 30%, #8a6a25, #4a3510); color:#ffe9a8; font-size:.5rem;}
+  .disc.gateclosed{box-shadow:0 0 0 3px #7a1f1f inset;}
+  .tokens{position:absolute; top:0; left:0; right:0; display:flex; justify-content:center; gap:1px; flex-wrap:wrap;}
+  .tok{width:13px; height:13px; border-radius:50%; border:1.5px solid #fff8e6; color:#fff; font-size:.55rem; font-weight:bold;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 1px 2px rgba(0,0,0,.4);}
+  .legend{display:flex; flex-wrap:wrap; gap:6px 12px; font-size:.8rem; justify-content:center;}
+  .turnbanner{text-align:center; font-size:1.1rem; font-weight:bold; padding:8px; border-radius:10px; background:#efe0b8; border:2px solid var(--line);}
+  .turnbanner.me{background:#d9e8c8; border-color:#5d7a3a;}
+  .stats{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.95rem;}
+  .q{font-size:1.08rem; font-weight:bold; margin:6px 0 10px;}
+  .result{padding:10px; border-radius:8px; text-align:center; font-weight:bold; margin:8px 0;}
+  .result.ok{background:#d9e8c8;} .result.bad{background:#f2cfc4;}
+  .log{max-height:130px; overflow-y:auto; font-size:.82rem; background:#fffdf4; border:1px solid var(--line); border-radius:8px; padding:8px;}
+  .log div{margin:2px 0; border-bottom:1px dotted #d9c48d; padding-bottom:2px;}
+  /* chat fixed at bottom of game screen */
+  .chatbar{position:fixed; left:0; right:0; bottom:0; background:#fbf3da; border-top:2px solid var(--line); z-index:20;}
+  .chatinner{max-width:560px; margin:0 auto; padding:6px 10px;}
+  .chatmsgs{max-height:96px; overflow-y:auto; font-size:.85rem; margin-bottom:5px;}
+  .chatmsgs div{margin:1px 0;} .chatmsgs b{color:var(--ink-dark);}
+  .chatrow{display:flex; gap:6px;} .chatrow input{flex:1; padding:9px;} .chatrow button{width:auto; margin:0; padding:9px 14px;}
+  body.inGame .wrap{padding-bottom:190px;}
+  .cert{text-align:center; border:3px double var(--ink); border-radius:10px; padding:18px 12px; background:radial-gradient(circle at 50% 0%, #fdf6dd, #f3e5c3);}
+  .cert h2{font-variant:small-caps; margin:4px 0;}
+  table{width:100%; border-collapse:collapse; font-size:.88rem;}
+  th,td{border:1px solid var(--line); padding:5px 6px; text-align:left;}
+  th{background:#efe0b8;}
+  .toast{position:fixed; top:10px; left:50%; transform:translateX(-50%); background:#7a1f1f; color:#fff; padding:10px 16px; border-radius:8px; z-index:50; display:none; max-width:92%; text-align:center;}
+  footer{text-align:center; font-size:.78rem; font-style:italic; margin:18px 0 6px; color:var(--ink-dark);}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="wrap">
+  <h1>Mythological Treasure Hunt</h1>
+  <p class="sub">Hunt the trail. Answer, gather keys, and open the gate.</p>
+
+  <!-- HOME -->
+  <section id="scr-home">
+    <div class="card">
+      <label for="myName">Your name</label>
+      <input type="text" id="myName" maxlength="24" placeholder="e.g. Bridgett" autocomplete="off">
+    </div>
+    <div class="card">
+      <h3 style="margin:4px 0;">Open a room</h3>
+      <label>Gate price (golden keys to open the Finish gate)</label>
+      <div class="seg" id="gateSeg">
+        <button type="button" data-gate="1" class="sel">1 golden key</button>
+        <button type="button" data-gate="2">2 golden keys</button>
+      </div>
+      <button id="btnCreate">Create Room</button>
+    </div>
+    <div class="card">
+      <h3 style="margin:4px 0;">Join a room</h3>
+      <label for="joinCode">Room code</label>
+      <input type="text" id="joinCode" class="code" maxlength="4" placeholder="CODE" autocomplete="off">
+      <button id="btnJoin" class="ghost">Join Room</button>
+    </div>
+  </section>
+
+  <!-- LOBBY -->
+  <section id="scr-lobby" class="hidden">
+    <div class="card">
+      <div style="text-align:center;">Room code — read it aloud:</div>
+      <div class="bigcode" id="lobbyCode">----</div>
+      <div id="lobbyGate" style="text-align:center; font-style:italic;"></div>
+      <ul class="plist" id="lobbyPlayers"></ul>
+    </div>
+    <div class="card">
+      <h3 style="margin:4px 0;">Choose your hunter</h3>
+      <div class="chargrid" id="charGrid"></div>
+    </div>
+    <div class="card">
+      <button id="btnStart">Start the Hunt</button>
+      <div id="startHint" class="tag" style="text-align:center;"></div>
+    </div>
+    <div class="card"><h3 style="margin:4px 0;">Hunt log</h3><div class="log" id="lobbyLog"></div></div>
+  </section>
+
+  <!-- GAME -->
+  <section id="scr-game" class="hidden">
+    <div class="turnbanner" id="turnBanner">…</div>
+    <div class="card" style="padding:10px;">
+      <div class="board" id="board"></div>
+      <div class="legend">
+        <span><b>E</b> Eye of Ra · easy</span><span><b>M</b> Medusa · you choose</span>
+        <span><b>S</b> Aztec Snake · medium</span><span><b>P</b> Phoenix · hard</span><span><b>C</b> Chest</span>
+        <span id="gateLegend"></span>
+      </div>
+    </div>
+    <div class="card" id="myPanel"></div>
+    <div class="card" id="actionCard"></div>
+    <div class="card">
+      <h3 style="margin:4px 0;">Hunters</h3>
+      <ul class="plist" id="gamePlayers"></ul>
+    </div>
+    <div class="card"><h3 style="margin:4px 0;">Hunt log</h3><div class="log" id="gameLog"></div></div>
+  </section>
+
+  <!-- END / CERTIFICATE -->
+  <section id="scr-end" class="hidden">
+    <div class="card cert">
+      <div style="font-size:1.3rem;">Certificate of Award</div>
+      <h2>Mythological Treasure Hunt</h2>
+      <div id="certBody"></div>
+    </div>
+    <div class="card">
+      <table id="standingsTable"></table>
+      <button id="btnRematch" class="hidden">Rematch — same room</button>
+      <button id="btnHome" class="ghost">Back to start</button>
+    </div>
+  </section>
+
+  <footer>Mythological Treasure Hunt © Bridgett Fowler. All rights reserved.</footer>
+</div>
+
+<!-- CHAT (fixed bottom, game screen) -->
+<div class="chatbar hidden" id="chatBar">
+  <div class="chatinner">
+    <div class="chatmsgs" id="chatMsgs"></div>
+    <div class="chatrow">
+      <input type="text" id="chatInput" maxlength="300" placeholder="Talk to the room…" autocomplete="off">
+      <button id="btnChat">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+var CHARACTERS = ['Archaeologist','Professor','Researcher','Student','Treasure Hunter','Guide'];
+var TITLES = ['Ruler of Mythology','Guru','Genius','Doctor','Master','Associate'];
+var COLORS = ['#b03a2e','#1f618d','#1e8449','#7d3c98','#ca6f1e','#117a65'];
+var SPACE_LETTER = { start:'START', finish:'END', eye:'E', medusa:'M', snake:'S', phoenix:'P', chest:'C' };
+var SPACE_NAME = { eye:'Eye of Ra', medusa:'Medusa', snake:'Aztec Snake', phoenix:'Phoenix', chest:'Treasure Chest', start:'Start', finish:'Finish' };
+
+var ws = null, myId = null, state = null, gatePrice = 1, displayPos = {};
+
+function $(id){ return document.getElementById(id); }
+function toast(msg){ var t=$('toast'); t.textContent=msg; t.style.display='block'; setTimeout(function(){t.style.display='none';},3200); }
+function send(obj){ if(ws && ws.readyState===1) ws.send(JSON.stringify(obj)); }
+function me(){ return state ? state.players.find(function(p){return p.id===myId;}) : null; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+function connect(){
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(proto + '//' + location.host);
+  ws.onmessage = function(ev){
+    var msg; try{ msg = JSON.parse(ev.data); }catch(e){ return; }
+    if(msg.type === 'error'){ toast(msg.message); return; }
+    if(msg.type === 'room_joined'){ myId = msg.playerId; try{ localStorage.setItem('th_room', JSON.stringify({code:msg.code, name:$('myName').value.trim()})); }catch(e){} return; }
+    if(msg.type === 'chat'){ addChat(msg.from, msg.text); return; }
+    if(msg.type === 'state'){ state = msg.state; render(); return; }
+  };
+  ws.onclose = function(){ setTimeout(connect, 2500); };
+}
+function addChat(from, text){
+  var box = $('chatMsgs'); var d = document.createElement('div');
+  d.innerHTML = '<b>' + esc(from) + ':</b> ' + esc(text);
+  box.appendChild(d); box.scrollTop = box.scrollHeight;
+}
+
+/* ---------- screens ---------- */
+function show(id){
+  ['scr-home','scr-lobby','scr-game','scr-end'].forEach(function(s){ $(s).classList.toggle('hidden', s!==id); });
+  var inGame = (id==='scr-game');
+  document.body.classList.toggle('inGame', inGame);
+  $('chatBar').classList.toggle('hidden', !(inGame || id==='scr-lobby'));
+}
+
+function render(){
+  if(!state) return;
+  if(state.phase === 'lobby') renderLobby();
+  else if(state.phase === 'playing') renderGame();
+  else if(state.phase === 'finished') renderEnd();
+}
+
+function renderLobby(){
+  show('scr-lobby');
+  $('lobbyCode').textContent = state.code;
+  $('lobbyGate').textContent = 'Gate price: ' + state.gatePrice + ' golden key' + (state.gatePrice>1?'s':'');
+  $('lobbyPlayers').innerHTML = state.players.map(function(p){
+    return '<li class="'+(p.connected?'':'away')+'"><span>'+(state.hostId===p.id?'👑 ':'')+'<b>'+esc(p.name)+'</b>'+(p.id===myId?' (you)':'')+'</span><span class="tag">'+(p.character?esc(p.character):'choosing…')+(p.connected?'':' · away')+'</span></li>';
+  }).join('');
+  var mine = me();
+  $('charGrid').innerHTML = CHARACTERS.map(function(c){
+    var takenBy = state.players.find(function(p){ return p.character===c && p.id!==myId; });
+    var cls = mine && mine.character===c ? 'mine' : (takenBy ? 'taken' : '');
+    return '<button class="'+cls+'" data-char="'+esc(c)+'" '+(takenBy?'disabled':'')+'>'+esc(c)+'</button>';
+  }).join('');
+  Array.prototype.forEach.call($('charGrid').querySelectorAll('button'), function(b){
+    b.onclick = function(){ send({type:'pick_character', character:b.getAttribute('data-char')}); };
+  });
+  var isHost = state.hostId===myId;
+  $('btnStart').classList.toggle('hidden', !isHost);
+  $('startHint').textContent = !isHost ? 'Waiting for the host to start…' :
+    (state.players.length<2 ? 'You need at least 2 hunters.' : (state.players.some(function(p){return !p.character;}) ? 'Everyone must pick a hunter first.' : 'All set!'));
+  $('btnStart').disabled = state.players.length<2 || state.players.some(function(p){return !p.character;});
+  $('lobbyLog').innerHTML = state.log.map(function(l){ return '<div>'+esc(l)+'</div>'; }).join('');
+}
+
+/* board position -> grid cell (winding / boustrophedon, 8 columns) */
+function cellOf(i){ var row = Math.floor(i/8), c = i%8; return { row: row, col: (row%2===0) ? c : 7-c }; }
+
+function renderBoard(){
+  var b = $('board'); b.innerHTML = '';
+  var cells = {};
+  state.board.forEach(function(t, i){ var cell = cellOf(i); cells[cell.row*8+cell.col] = i; });
+  for(var k=0;k<72;k++){
+    var i = cells[k];
+    var d = document.createElement('div');
+    if(i === undefined){ d.style.visibility='hidden'; b.appendChild(d); continue; }
+    var t = state.board[i];
+    d.className = 'disc ' + t + (t==='finish' && !state.gateOpen ? ' gateclosed' : '');
+    var tokens = state.players.filter(function(p){ return (displayPos[p.id]!=null?displayPos[p.id]:p.pos) === i; })
+      .map(function(p){ var idx = state.players.indexOf(p); return '<span class="tok" style="background:'+COLORS[idx%6]+'">'+esc(p.name.charAt(0).toUpperCase())+'</span>'; }).join('');
+    d.innerHTML = '<span class="tokens">'+tokens+'</span>' + SPACE_LETTER[t] + '<small>'+i+'</small>';
+    b.appendChild(d);
+  }
+  $('gateLegend').textContent = state.gateOpen ? '· The gate is OPEN — exact roll to finish' : '· The gate is LOCKED ('+state.gatePrice+' golden key'+(state.gatePrice>1?'s':'')+')';
+}
+
+function animateMove(){
+  var mv = state.lastMove; if(!mv || !mv.path || !mv.path.length) return;
+  var pid = mv.playerId, steps = mv.path.slice(), k = 0;
+  var iv = setInterval(function(){
+    if(k >= steps.length){ clearInterval(iv); return; }
+    displayPos[pid] = steps[k]; k++; renderBoard();
+  }, 230);
+}
+
+function renderGame(){
+  show('scr-game');
+  state.players.forEach(function(p){ if(displayPos[p.id]==null) displayPos[p.id]=p.pos; });
+  animateMove();
+  setTimeout(renderBoard, (state.lastMove && state.lastMove.path ? state.lastMove.path.length*230+60 : 0));
+
+  var mine = me(); if(!mine) return;
+  var cur = state.players.find(function(p){ return p.id===state.currentId; });
+  var myTurn = state.currentId===myId && !mine.finished;
+  var banner = $('turnBanner');
+  banner.className = 'turnbanner' + (myTurn ? ' me' : '');
+  banner.textContent = mine.finished ? 'You are through the gate! Watching the others finish…' :
+    myTurn ? 'Your turn, ' + mine.name + '!' : (cur ? cur.name + ' is hunting…' : '…');
+  if(state.lastRoll && state.lastRoll.value) banner.textContent += '  ·  Last roll: ' + state.lastRoll.value;
+
+  $('myPanel').innerHTML =
+    '<h3 style="margin:4px 0;">' + esc(mine.character||'') + ' — ' + esc(mine.name) + '</h3>' +
+    '<div class="stats"><span>🪙 Coins: <b>' + mine.coins + '</b></span><span>♦ Gems: <b>' + mine.gems + '</b></span>' +
+    '<span>🏺 Treasures: <b>' + mine.treasures.length + '</b></span><span>🗝 Golden keys: <b>' + mine.keysGold + '</b></span>' +
+    '<span>🗝 Black keys: <b>' + mine.keysBlack + '</b></span><span>⭐ Points: <b>' + mine.points + '</b></span></div>' +
+    (mine.treasures.length ? '<div class="tag" style="margin-top:5px;">' + mine.treasures.map(esc).join(' · ') + '</div>' : '') +
+    (mine.stuck ? '<div class="result bad">You are STUCK here — answer a question correctly to break free.</div>' : '') +
+    (mine.missTurn ? '<div class="result bad">A trap will cost you your next turn.</div>' : '') +
+    '<div class="tag">Space ' + mine.pos + ' — ' + (SPACE_NAME[state.board[mine.pos]]||'') + '</div>';
+
+  renderActions(mine, myTurn);
+  $('gamePlayers').innerHTML = state.players.map(function(p){
+    var idx = state.players.indexOf(p);
+    return '<li class="'+(p.connected?'':'away')+'"><span><span class="tok" style="background:'+COLORS[idx%6]+';display:inline-flex;">'+esc(p.name.charAt(0).toUpperCase())+'</span> <b>'+esc(p.name)+'</b> · '+esc(p.character||'')+(p.id===state.currentId?' · hunting now':'')+(p.finished?' · FINISHED':'')+'</span><span class="tag">'+p.points+' pts · space '+p.pos+'</span></li>';
+  }).join('');
+  $('gameLog').innerHTML = state.log.map(function(l){ return '<div>'+esc(l)+'</div>'; }).join('');
+  $('gameLog').scrollTop = $('gameLog').scrollHeight;
+}
+
+function renderActions(mine, myTurn){
+  var card = $('actionCard'); var pend = state.pending; var html = '';
+  if(state.lastResult){
+    var r = state.lastResult;
+    html += '<div class="result '+(r.correct?'ok':'bad')+'">' + (r.correct ? 'Correct!' : 'Wrong — the answer was: ' + esc(r.correctText)) + '</div>';
+  }
+  if(!pend){
+    if(myTurn && !mine.finished){
+      if(mine.missTurn) html += '<button id="actRoll">Take the trap\u2019s miss-turn</button>';
+      else if(mine.stuck) html += '<button id="actRoll">Answer a question to break free</button>';
+      else html += '<button id="actRoll">Roll the d8</button>';
+    } else if(!mine.finished){
+      html += '<div class="tag" style="text-align:center;">Waiting for the other hunters…</div>';
+    }
+    card.innerHTML = html;
+    var rb = $('actRoll'); if(rb) rb.onclick = function(){ send({type:'roll'}); };
+    return;
+  }
+  var owner = state.players.find(function(p){ return p.id===pend.forPlayer; });
+  var minePend = pend.forPlayer===myId;
+  if(pend.kind === 'choose_level'){
+    html += '<div class="q">Medusa! ' + (minePend ? 'Choose your question difficulty:' : esc(owner?owner.name:'') + ' is choosing a difficulty…') + '</div>';
+    if(minePend) html += '<div class="row"><button data-lv="1">Easy · 1 coin</button><button data-lv="2">Medium · 2 coins</button><button data-lv="3">Hard · 3 coins</button></div>';
+  } else if(pend.kind === 'question'){
+    html += '<div class="tag">Level ' + pend.level + ' · ' + (SPACE_NAME[pend.spaceType]||'') + (pend.stuckAttempt ? ' · break-free attempt' : '') + '</div>';
+    html += '<div class="q">' + esc(pend.q) + '</div>';
+    html += pend.choices.map(function(c, i){
+      return '<button class="choice" data-ch="'+i+'" '+(minePend?'':'disabled')+'>' + esc(c) + '</button>';
+    }).join('');
+    if(!minePend) html += '<div class="tag" style="text-align:center;">' + esc(owner?owner.name:'') + ' is answering… (the answer stays hidden until they choose)</div>';
+  } else if(pend.kind === 'chest'){
+    var c = pend.card;
+    html += '<div class="q">' + (c.kind==='treasure' ? '🏺 Treasure: ' + esc(c.name) : '⚠ Trap: ' + esc(c.name)) + '</div>';
+    html += '<div>' + (c.kind==='treasure' ? 'Worth 10 points, and it carries a ' + (c.key==='gold' ? 'GOLDEN' : 'black') + ' skeleton key.' : esc(c.text||'')) + '</div>';
+    if(minePend) html += '<button id="actContinue">Continue</button>';
+  } else if(pend.kind === 'gate'){
+    html += '<div class="q">🔒 The Locked Gate</div>';
+    html += '<div>The gate opens for <b>everyone</b> once paid. Price: <b>' + pend.price + ' golden</b>. You hold the equal of <b>' + pend.equiv + ' golden</b> (golden keys count 1; 3 black = 1 golden). Keys you pay are <b>spent</b>.</div>';
+    if(minePend) html += '<div class="row"><button id="actPay" '+(pend.equiv>=pend.price?'':'disabled')+'>Pay the gate</button><button id="actWait" class="ghost">Wait at the gate</button></div>';
+    else html += '<div class="tag" style="text-align:center;">' + esc(owner?owner.name:'') + ' stands at the gate…</div>';
+  }
+  card.innerHTML = html;
+  Array.prototype.forEach.call(card.querySelectorAll('[data-lv]'), function(b){ b.onclick = function(){ send({type:'choose_level', level:parseInt(b.getAttribute('data-lv'),10)}); }; });
+  Array.prototype.forEach.call(card.querySelectorAll('[data-ch]'), function(b){ b.onclick = function(){ send({type:'answer', choice:parseInt(b.getAttribute('data-ch'),10)}); }; });
+  var cb = $('actContinue'); if(cb) cb.onclick = function(){ send({type:'continue'}); };
+  var pb = $('actPay'); if(pb) pb.onclick = function(){ send({type:'gate_pay'}); };
+  var wb = $('actWait'); if(wb) wb.onclick = function(){ send({type:'gate_wait'}); };
+}
+
+function renderEnd(){
+  show('scr-end');
+  var s = state.standings || [];
+  $('certBody').innerHTML = s.map(function(p, i){
+    return '<div style="margin:8px 0;"><b>' + (i+1) + '. ' + esc(p.name) + '</b> — ' + esc(TITLES[i]||'') + ' of the Hunt<br><span class="tag">' +
+      p.coins + ' coins · ' + p.gems + ' gems · ' + p.treasures.length + ' treasures · <b>' + p.points + ' points</b></span>' +
+      (p.treasures.length ? '<br><span class="tag">' + p.treasures.map(esc).join(' · ') + '</span>' : '') + '</div>';
+  }).join('');
+  $('standingsTable').innerHTML = '<tr><th>Hunter</th><th>Character</th><th>Coins</th><th>Gems</th><th>Treasures</th><th>Keys G/B</th><th>Points</th></tr>' +
+    s.map(function(p){ return '<tr><td>'+esc(p.name)+'</td><td>'+esc(p.character||'')+'</td><td>'+p.coins+'</td><td>'+p.gems+'</td><td>'+p.treasures.length+'</td><td>'+p.keysGold+'/'+p.keysBlack+'</td><td><b>'+p.points+'</b></td></tr>'; }).join('');
+  $('btnRematch').classList.toggle('hidden', state.hostId!==myId);
+}
+
+/* ---------- wiring ---------- */
+Array.prototype.forEach.call($('gateSeg').querySelectorAll('button'), function(b){
+  b.onclick = function(){
+    gatePrice = parseInt(b.getAttribute('data-gate'),10);
+    Array.prototype.forEach.call($('gateSeg').querySelectorAll('button'), function(x){ x.classList.toggle('sel', x===b); });
+  };
+});
+$('btnCreate').onclick = function(){
+  var name = $('myName').value.trim(); if(!name) return toast('Type your name first.');
+  send({type:'create_room', name:name, gatePrice:gatePrice});
+};
+$('btnJoin').onclick = function(){
+  var name = $('myName').value.trim(); if(!name) return toast('Type your name first.');
+  var code = $('joinCode').value.trim().toUpperCase(); if(code.length!==4) return toast('The room code is 4 letters.');
+  send({type:'join_room', code:code, name:name});
+};
+$('btnStart').onclick = function(){ send({type:'start_game'}); };
+$('btnRematch').onclick = function(){ send({type:'rematch'}); };
+$('btnHome').onclick = function(){ try{ localStorage.removeItem('th_room'); }catch(e){} location.reload(); };
+function chatSend(){ var t = $('chatInput').value.trim(); if(!t) return; send({type:'chat', text:t}); $('chatInput').value=''; }
+$('btnChat').onclick = chatSend;
+$('chatInput').addEventListener('keydown', function(e){ if(e.key==='Enter') chatSend(); });
+
+connect();
+/* Gentle auto-rejoin if we were in a room before a refresh. */
+setTimeout(function(){
+  try{
+    var saved = JSON.parse(localStorage.getItem('th_room')||'null');
+    if(saved && saved.code && saved.name && !state){ $('myName').value = saved.name; send({type:'join_room', code:saved.code, name:saved.name}); }
+  }catch(e){}
+}, 600);
+</script>
+</body>
+</html>
