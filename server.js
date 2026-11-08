@@ -296,8 +296,13 @@ const handlers = {
     const room = rooms.get(code);
     if (!room) return err(ws, 'No room with that code.');
     if (!name) return err(ws, 'Tell us your name first.');
-    // Reconnect: same name reclaims a disconnected seat.
-    const away = room.players.find(p => p.name.toLowerCase() === name.toLowerCase() && !p.connected);
+    // Same live session re-joining (client auto-reconnect re-send): just re-confirm.
+    if (session.room === room && session.player && session.player.name.toLowerCase() === name.toLowerCase()) {
+      send(ws, { type: 'room_joined', code, playerId: session.player.id, isHost: room.hostId === session.player.id });
+      return broadcast(room);
+    }
+    // Reconnect: same name reclaims a disconnected (or zombie-socket) seat.
+    const away = room.players.find(p => p.name.toLowerCase() === name.toLowerCase() && (!p.connected || !p.ws || p.ws.readyState !== 1));
     if (away) {
       attach(ws, session, room, away);
       roomLog(room, `${name} reconnected.`);
@@ -464,7 +469,17 @@ function attach(ws, session, room, player) {
   player.connected = true;
 }
 
+setInterval(() => {
+  for (const ws of wss.clients) {
+    if (ws.isAlive === false) { try { ws.terminate(); } catch { /* already gone */ } continue; }
+    ws.isAlive = false;
+    try { ws.ping(); } catch { /* socket already closing */ }
+  }
+}, 25000);
+
 wss.on('connection', (ws) => {
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
   const session = { room: null, player: null };
   ws.on('message', (raw) => {
     let msg;
@@ -474,7 +489,7 @@ wss.on('connection', (ws) => {
   });
   ws.on('close', () => {
     const { room, player } = session;
-    if (room && player) {
+    if (room && player && player.ws === ws) {
       player.connected = false;
       player.ws = null;
       roomLog(room, `${player.name} stepped away.`);

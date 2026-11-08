@@ -199,6 +199,13 @@ function connect(){
     if(msg.type === 'state'){ state = msg.state; render(); return; }
   };
   ws.onclose = function(){ setTimeout(connect, 2500); };
+  ws.onopen = function(){
+    // First load AND every auto-reconnect: rebind this socket to our seat.
+    try{
+      var saved = JSON.parse(localStorage.getItem('th_room')||'null');
+      if(saved && saved.code && saved.name){ $('myName').value = saved.name; send({type:'join_room', code:saved.code, name:saved.name}); }
+    }catch(e){}
+  };
 }
 function addChat(from, text){
   var box = $('chatMsgs'); var d = document.createElement('div');
@@ -395,13 +402,7 @@ $('btnChat').onclick = chatSend;
 $('chatInput').addEventListener('keydown', function(e){ if(e.key==='Enter') chatSend(); });
 
 connect();
-/* Gentle auto-rejoin if we were in a room before a refresh. */
-setTimeout(function(){
-  try{
-    var saved = JSON.parse(localStorage.getItem('th_room')||'null');
-    if(saved && saved.code && saved.name && !state){ $('myName').value = saved.name; send({type:'join_room', code:saved.code, name:saved.name}); }
-  }catch(e){}
-}, 600);
+/* Auto-rejoin lives in ws.onopen (fires on first connect and every reconnect). */
 </script>
 </body>
 </html>
